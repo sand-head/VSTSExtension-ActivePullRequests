@@ -19,27 +19,24 @@ import { Filter, FILTER_CHANGE_EVENT, IFilter, IFilterState } from "azure-devops
 import * as React from "react";
 import { useState } from "react";
 import * as styles from "./app.scss";
-import { PullRequestTable } from "./PullRequestTable/PullRequestTable";
-import { getStatusFromBuild, getVoteStatus } from "./PullRequestTable/PullRequestTable.helpers";
-import { PullRequestTableItem } from "./PullRequestTable/PullRequestTable.models";
-import SettingsPanel from "./SettingsPanel/SettingsPanel";
-import { Settings } from "./SettingsPanel/SettingsPanel.models";
-
-enum TabType {
-  active = "active",
-  drafts = "drafts"
-}
+import { useAzureDevOpsSDK } from "./hooks/DevOps";
+import { PullRequestTable } from "./components/PullRequestTable/PullRequestTable";
+import { getStatusFromBuild, getVoteStatus } from "./components/PullRequestTable/PullRequestTable.helpers";
+import { PullRequestTableItem } from "./components/PullRequestTable/PullRequestTable.models";
+import SettingsPanel from "./components/SettingsPanel/SettingsPanel";
+import { Settings } from "./components/SettingsPanel/SettingsPanel.models";
+import { TabContents, TabType } from "./components/TabContents";
 
 export interface AppState {
-  hostUrl: string;
+  hostUrl?: string;
   pullRequests: PullRequestTableItem[];
   repositories: GitRepository[];
-  selectedTabId: string;
-  activePrBadge: number;
-  draftPrBadge: number;
+  selectedTabId: TabType;
+  activePrBadge?: number;
+  draftPrBadge?: number;
   filter: IFilterState;
   showSettings: boolean;
-  settings: Settings;
+  settings?: Settings;
 }
 
 export const App: React.FunctionComponent = () => {
@@ -51,11 +48,121 @@ export const App: React.FunctionComponent = () => {
     showSettings: false,
     filter: {},
     repositories: [],
-    pullRequests: undefined,
-    selectedTabId: TabType.active,
+    pullRequests: [],
+    selectedTabId: TabType.Active,
     activePrBadge: undefined,
     draftPrBadge: undefined,
     settings: undefined
+  });
+  const [userContext, setUserContext] = useState<IUserContext>();
+  const [projectName, setProjectName] = useState<string>();
+  const [dataManager, setDataManager] = useState<IExtensionDataManager>();
+
+  const onSelectedTabChanged = (newTabId: string) => {
+    if (state.hostUrl) {
+      setState({ ...state, selectedTabId: newTabId as TabType });
+    }
+  };
+
+  const getAllPullRequests = async (): Promise<PullRequestTableItem[]> => {
+    const builds = await buildClient.getBuilds(projectName!, undefined, undefined, undefined, undefined, undefined, undefined, BuildReason.PullRequest) || [];
+    const pullRequests: PullRequestTableItem[] = await getPullRequests(builds);
+    while (pullRequests.length > 0 && pullRequests.length % 99 === 0) {
+      const morePRs = await getPullRequests(builds, pullRequests.length);
+      if (morePRs.length === 0) break;
+      pullRequests.push(...morePRs);
+    }
+    return pullRequests;
+  };
+
+  const getPullRequests = async (builds: Build[], skip = 0): Promise<PullRequestTableItem[]> => {
+    const prs = await gitClient.getPullRequestsByProject(projectName!, searchFilter, undefined, skip, 99);
+    if (prs.length === 0) return [];
+    return [
+      ...await Promise.all(prs.map(async pr => {
+        const currentUserReview = pr.reviewers.find(x => x.id === userContext?.id);
+        const latestBuild = builds.find(x => x.triggerInfo["pr.number"] != null && x.triggerInfo["pr.number"] === pr.pullRequestId.toString());
+        const comments = (await gitClient.getThreads(pr.repository.id, pr.pullRequestId)).filter(thread => !thread.isDeleted && thread.status);
+        return {
+          id: pr.pullRequestId,
+          isDraft: pr.isDraft,
+          author: pr.createdBy,
+          creationDate: pr.creationDate,
+          title: pr.title,
+          repo: pr.repository,
+          baseBranch: pr.sourceRefName.replace("refs/heads/", ""),
+          targetBranch: pr.targetRefName.replace("refs/heads/", ""),
+          vote: getVoteStatus(currentUserReview ? currentUserReview.vote : -1),
+          buildDetails: {
+            build: latestBuild,
+            status: getStatusFromBuild(latestBuild)
+          },
+          reviewers: pr.reviewers,
+          link: pr.url,
+          comments: comments
+        };
+      }))
+    ];
+  }
+
+  const getCurrentSettings = async (): Promise<Settings> => {
+    var settingsResult = await dataManager?.getValue<string>(`${projectName}-extension-settings`, { scopeType: "User" });
+    if (settingsResult && settingsResult !== "") {
+      return JSON.parse(settingsResult);
+    }
+
+    // Default settings
+    return {
+      AuthorColumnEnabled: true,
+      BuildStatusColumnEnabled: true,
+      CommentsColumnEnabled: true,
+      CreatedColumnEnabled: true,
+      DetailsColumnEnabled: true,
+      MyVoteColumnEnabled: true,
+      RepositoryColumnEnabled: true,
+      ReviewersColumnEnabled: true
+    };
+  }
+  
+  const stuff = useAzureDevOpsSDK(async () => {
+    const extensionContext = SDK.getExtensionContext();
+    console.log(`You're using version ${extensionContext.version} of All Active Pull Requests.`);
+    const hostContext = SDK.getHost();
+    setUserContext(SDK.getUser());
+  
+    const accessToken = await SDK.getAccessToken();
+    const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService);
+    const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
+
+    const project = await projectService.getProject();
+    setProjectName(project?.name);
+    setDataManager(await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, accessToken));
+
+    const settings = await getCurrentSettings();
+    const repos = (await gitClient.getRepositories(projectName)).sort((a, b) => a.name.localeCompare(b.name));
+    const pullRequests = await getAllPullRequests();
+
+    const parentUrl = new URL(document.referrer);
+    let baseUrl = parentUrl.origin;
+    // the following base URL calculation was mostly done via trial-and-error:
+    if (parentUrl.pathname.split('/')[1] === 'tfs') {
+      baseUrl += `/tfs/${hostContext.name}/${projectName}`;
+    } else if (parentUrl.hostname.endsWith('visualstudio.com')) {
+      baseUrl += `/${projectName}`;
+    } else {
+      baseUrl += `/${hostContext.name}/${projectName}`;
+    }
+    console.debug('base URL', baseUrl);
+
+    setState({
+      ...state,
+      hostUrl: baseUrl,
+      settings: settings,
+      repositories: repos,
+      pullRequests: pullRequests.sort(this.defaultSortPrs),
+      activePrBadge: pullRequests.filter(pr => !pr.isDraft).length,
+      draftPrBadge: pullRequests.filter(pr => pr.isDraft && pr.author.id === userContext!.id).length
+    });
   });
 
   return (
@@ -65,9 +172,9 @@ export const App: React.FunctionComponent = () => {
           titleSize={TitleSize.Large}
           commandBarItems={[]} />
 
-        <TabBar selectedTabId={state.selectedTabId} onSelectedTabChanged={this.onSelectedTabChanged} renderAdditionalContent={this.renderTabBarCommands}>
-          <Tab id={TabType.active} name="Active Pull Requests" badgeCount={state.activePrBadge} />
-          <Tab id={TabType.drafts} name="My Drafts" badgeCount={state.draftPrBadge} />
+        <TabBar selectedTabId={state.selectedTabId} onSelectedTabChanged={onSelectedTabChanged} renderAdditionalContent={this.renderTabBarCommands}>
+          <Tab id={TabType.Active} name="Active Pull Requests" badgeCount={state.activePrBadge} />
+          <Tab id={TabType.Drafts} name="My Drafts" badgeCount={state.draftPrBadge} />
         </TabBar>
         <ConditionalChildren renderChildren={this.showFilter}>
           <div className="page-content-left page-content-right page-content-top">
@@ -88,9 +195,9 @@ export const App: React.FunctionComponent = () => {
           </div>
         </ConditionalChildren>
         <ConditionalChildren renderChildren={state.showSettings}>
-          <SettingsPanel settings={state.settings} dataManager={this.dataManager} closeSettings={this.closeSettings} projectName={this.projectName} />
+          <SettingsPanel settings={state.settings!} dataManager={dataManager!} closeSettings={closeSettings} projectName={projectName!} />
         </ConditionalChildren>
-        {this.renderTabContents()}
+        <TabContents {...state} userId={userContext!.id} />
       </Page>
     </Surface>
   );
@@ -128,7 +235,7 @@ export class App2 extends React.Component<{}, AppState> {
       filter: {},
       repositories: [],
       pullRequests: undefined,
-      selectedTabId: TabType.active,
+      selectedTabId: TabType.Active,
       activePrBadge: undefined,
       draftPrBadge: undefined,
       settings: undefined
@@ -152,8 +259,8 @@ export class App2 extends React.Component<{}, AppState> {
           commandBarItems={[]} />
 
         <TabBar selectedTabId={this.state.selectedTabId} onSelectedTabChanged={this.onSelectedTabChanged} renderAdditionalContent={this.renderTabBarCommands}>
-          <Tab id={TabType.active} name="Active Pull Requests" badgeCount={this.state.activePrBadge} />
-          <Tab id={TabType.drafts} name="My Drafts" badgeCount={this.state.draftPrBadge} />
+          <Tab id={TabType.Active} name="Active Pull Requests" badgeCount={this.state.activePrBadge} />
+          <Tab id={TabType.Drafts} name="My Drafts" badgeCount={this.state.draftPrBadge} />
         </TabBar>
         <ConditionalChildren renderChildren={this.showFilter}>
           <div className="page-content-left page-content-right page-content-top">
@@ -307,13 +414,13 @@ export class App2 extends React.Component<{}, AppState> {
   }
 
   private renderTabContents() {
-    if (this.state.selectedTabId === TabType.active) {
+    if (this.state.selectedTabId === TabType.Active) {
       return <section className="page-content page-content-top">
         <PullRequestTable pullRequests={
           this.state.pullRequests ? this.state.pullRequests.filter(x => !x.isDraft) : undefined
         } hostUrl={this.state.hostUrl} filter={this.state.filter} settings={this.state.settings} />
       </section>;
-    } else if (this.state.selectedTabId === TabType.drafts) {
+    } else if (this.state.selectedTabId === TabType.Drafts) {
       return <section className="page-content page-content-top">
         <PullRequestTable pullRequests={
           this.state.pullRequests ? this.state.pullRequests.filter(x => x.isDraft && x.author.id === this.userContext.id) : undefined

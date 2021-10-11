@@ -38,10 +38,11 @@ export function getVoteStatus(vote: number): VoteDisplayStatus {
   }
 }
 
-export function getStatusFromBuild(build: Build): BuildDisplayStatus {
-  if (build == null) {
+export function getStatusFromBuild(build?: Build): BuildDisplayStatus {
+  if (!build) {
     return { message: "" };
   }
+  
   switch (build.status) {
     case BuildStatus.NotStarted:
       return {
