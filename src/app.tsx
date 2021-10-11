@@ -1,7 +1,7 @@
 import * as API from "azure-devops-extension-api";
 import { CommonServiceIds, IExtensionDataManager, IExtensionDataService, IProjectPageService } from "azure-devops-extension-api";
 import { BuildReason, BuildRestClient, Build } from "azure-devops-extension-api/Build";
-import { GitRestClient, PullRequestStatus } from "azure-devops-extension-api/Git";
+import { GitRepository, GitRestClient, PullRequestStatus } from "azure-devops-extension-api/Git";
 import * as SDK from "azure-devops-extension-sdk";
 import { IUserContext } from "azure-devops-extension-sdk";
 import { ConditionalChildren } from "azure-devops-ui/ConditionalChildren";
@@ -15,9 +15,9 @@ import { Surface, SurfaceBackground } from "azure-devops-ui/Surface";
 import { Tab, TabBar } from "azure-devops-ui/Tabs";
 import { KeywordFilterBarItem } from "azure-devops-ui/TextFilterBarItem";
 import { DropdownMultiSelection } from "azure-devops-ui/Utilities/DropdownSelection";
-import { Filter, FILTER_CHANGE_EVENT, IFilter } from "azure-devops-ui/Utilities/Filter";
+import { Filter, FILTER_CHANGE_EVENT, IFilter, IFilterState } from "azure-devops-ui/Utilities/Filter";
 import * as React from "react";
-import { AppState } from "./app.models";
+import { useState } from "react";
 import * as styles from "./app.scss";
 import { PullRequestTable } from "./PullRequestTable/PullRequestTable";
 import { getStatusFromBuild, getVoteStatus } from "./PullRequestTable/PullRequestTable.helpers";
@@ -30,7 +30,73 @@ enum TabType {
   drafts = "drafts"
 }
 
-export class App extends React.Component<{}, AppState> {
+export interface AppState {
+  hostUrl: string;
+  pullRequests: PullRequestTableItem[];
+  repositories: GitRepository[];
+  selectedTabId: string;
+  activePrBadge: number;
+  draftPrBadge: number;
+  filter: IFilterState;
+  showSettings: boolean;
+  settings: Settings;
+}
+
+export const App: React.FunctionComponent = () => {
+  const gitClient = API.getClient(GitRestClient);
+  const buildClient = API.getClient(BuildRestClient);
+  const filter = new Filter();
+  const [state, setState] = useState<AppState>({
+    hostUrl: undefined,
+    showSettings: false,
+    filter: {},
+    repositories: [],
+    pullRequests: undefined,
+    selectedTabId: TabType.active,
+    activePrBadge: undefined,
+    draftPrBadge: undefined,
+    settings: undefined
+  });
+
+  return (
+    <Surface background={SurfaceBackground.neutral}>
+      <Page className={`flex-grow ${styles.fullHeight}`}>
+        <Header title="All Repositories"
+          titleSize={TitleSize.Large}
+          commandBarItems={[]} />
+
+        <TabBar selectedTabId={state.selectedTabId} onSelectedTabChanged={this.onSelectedTabChanged} renderAdditionalContent={this.renderTabBarCommands}>
+          <Tab id={TabType.active} name="Active Pull Requests" badgeCount={state.activePrBadge} />
+          <Tab id={TabType.drafts} name="My Drafts" badgeCount={state.draftPrBadge} />
+        </TabBar>
+        <ConditionalChildren renderChildren={this.showFilter}>
+          <div className="page-content-left page-content-right page-content-top">
+            <FilterBar filter={this.filter}>
+              <KeywordFilterBarItem filterItemKey="keyword" />
+              <DropdownFilterBarItem
+                filterItemKey="repo"
+                filter={this.filter}
+                items={state.repositories.map(repo => {
+                  return {
+                    id: repo.id,
+                    text: repo.name
+                  };
+                })}
+                selection={this.repoFilterSelection}
+                placeholder="Repositories" />
+            </FilterBar>
+          </div>
+        </ConditionalChildren>
+        <ConditionalChildren renderChildren={state.showSettings}>
+          <SettingsPanel settings={state.settings} dataManager={this.dataManager} closeSettings={this.closeSettings} projectName={this.projectName} />
+        </ConditionalChildren>
+        {this.renderTabContents()}
+      </Page>
+    </Surface>
+  );
+};
+
+export class App2 extends React.Component<{}, AppState> {
   private showFilter = new ObservableValue<boolean>(false);
   private projectName: string;
   private isReady: boolean = false;
@@ -142,7 +208,7 @@ export class App extends React.Component<{}, AppState> {
       baseUrl += `/${hostContext.name}/${this.projectName}`;
     }
     console.log('base URL', baseUrl);
-    
+
     this.setState({
       hostUrl: baseUrl,
       settings: settings,

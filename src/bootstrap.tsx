@@ -2,7 +2,7 @@ import "es6-promise/auto";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import * as SDK from "azure-devops-extension-sdk";
-import { App } from "./app";
+import { App2 } from "./App";
 
 SDK.init();
-SDK.ready().then(_ => ReactDOM.render(<App />, document.getElementById("root")));
+SDK.ready().then(_ => ReactDOM.render(<App2 />, document.getElementById("root")));
