@@ -4,14 +4,14 @@
     "experimentalDecorators": true,
     "module": "amd",
     "moduleResolution": "node",
-    "noImplicitAny": true,
+    "noImplicitAny": false,
     "noImplicitThis": true,
     "strict": true,
-    "target": "es5",
+    "target": "es6",
     "rootDir": "src/",
     "outDir": "dist/",
     "jsx": "react",
-    "lib": ["es5", "es6", "dom", "es2015.promise"],
+    "lib": ["es6", "dom", "es2016"],
     "types": ["react"],
     "esModuleInterop": true
   }

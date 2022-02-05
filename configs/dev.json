@@ -1,6 +1,7 @@
 {
   "manifestVersion": 1,
-  "version": "1.1.5",
+  "id": "mimeo-active-pull-requests-dev",
+  "version": "1.0.0",
   "name": "All Active Pull Requests",
   "scopes": [
     "vso.code",
@@ -9,6 +10,8 @@
     "vso.profile"
   ],
   "description": "View all active pull requests across all repos in a project.",
+  "public": false,
+  "baseUrl": "https://localhost:3000",
   "publisher": "mimeo-vs-marketplace",
   "icons": {
     "default": "static/images/pullRequest.png"

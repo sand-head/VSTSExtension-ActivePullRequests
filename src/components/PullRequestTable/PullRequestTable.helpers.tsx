@@ -1,111 +1,129 @@
-import { VoteDisplayStatus, BuildDisplayStatus, CommentDisplayStatus } from "./PullRequestTable.models";
-import { Statuses } from "azure-devops-ui/Status";
-import { Build, BuildStatus, BuildResult } from "azure-devops-extension-api/Build";
+import {
+  VoteDisplayStatus,
+  BuildDisplayStatus,
+  CommentDisplayStatus,
+} from './PullRequestTable.models';
+import { Statuses } from 'azure-devops-ui/Status';
+import {
+  Build,
+  BuildStatus,
+  BuildResult,
+} from 'azure-devops-extension-api/Build';
 
 export function getVoteStatus(vote: number): VoteDisplayStatus {
   switch (vote) {
     case -10:
       return {
         status: Statuses.Failed,
-        message: "Rejected",
-        order: 0
+        message: 'Rejected',
+        order: 0,
       };
     case -5:
       return {
-        status: Object.assign(Statuses.Waiting, { color: Statuses.Warning.color }),
-        message: "Waiting for the Author",
-        order: 1
+        status: Object.assign(Statuses.Waiting, {
+          color: Statuses.Warning.color,
+        }),
+        message: 'Waiting for the Author',
+        order: 1,
       };
     case -1:
       return {
         status: Statuses.Queued,
-        message: "No Response",
-        order: 4
+        message: 'No Response',
+        order: 4,
       };
     case 0:
       return {
-        status: Object.assign(Statuses.Waiting, { color: Statuses.Failed.color }),
-        message: "Response Required",
-        order: 3
+        status: Object.assign(Statuses.Waiting, {
+          color: Statuses.Failed.color,
+        }),
+        message: 'Response Required',
+        order: 3,
       };
     case 5:
     case 10:
       return {
         status: Statuses.Success,
-        message: "Approved",
-        order: 2
+        message: 'Approved',
+        order: 2,
       };
+    default:
+      throw Error('Invalid vote value');
   }
 }
 
 export function getStatusFromBuild(build?: Build): BuildDisplayStatus {
   if (!build) {
-    return { message: "" };
+    return { message: '' };
   }
-  
+
   switch (build.status) {
     case BuildStatus.NotStarted:
       return {
-        message: "Not Started",
-        icon: Statuses.Waiting
+        message: 'Not Started',
+        icon: Statuses.Waiting,
       };
     case BuildStatus.InProgress:
       return {
-        message: "In Progress",
-        icon: Statuses.Running
+        message: 'In Progress',
+        icon: Statuses.Running,
       };
     case BuildStatus.Postponed:
       return {
-        message: "Postponed",
-        icon: Statuses.Waiting
+        message: 'Postponed',
+        icon: Statuses.Waiting,
       };
     case BuildStatus.Cancelling:
       return {
-        message: "Cancelling",
-        icon: Statuses.Running
+        message: 'Cancelling',
+        icon: Statuses.Running,
       };
     case BuildStatus.Completed:
       switch (build.result) {
         case BuildResult.Succeeded:
           return {
-            message: "Succeeded",
-            icon: Statuses.Success
+            message: 'Succeeded',
+            icon: Statuses.Success,
           };
         case BuildResult.PartiallySucceeded:
           return {
-            message: "Partially Succeeded",
-            icon: Statuses.Success
+            message: 'Partially Succeeded',
+            icon: Statuses.Success,
           };
         case BuildResult.Canceled:
           return {
-            message: "Canceled",
-            icon: Statuses.Canceled
+            message: 'Canceled',
+            icon: Statuses.Canceled,
           };
         case BuildResult.Failed:
           return {
-            message: "Failed",
-            icon: Statuses.Failed
+            message: 'Failed',
+            icon: Statuses.Failed,
           };
         default:
           return {
-            message: "Completed",
-            icon: Statuses.Success
+            message: 'Completed',
+            icon: Statuses.Success,
           };
       }
     default:
-      return { message: "" };
+      return { message: '' };
   }
 }
 
-export function getCommentStatus(totalComments: number, inactiveComments: number): CommentDisplayStatus {
+export function getCommentStatus(
+  totalComments: number,
+  inactiveComments: number
+): CommentDisplayStatus {
   let statusResult: CommentDisplayStatus = {
-    message: "",
-    icon: null
+    message: '',
+    icon: undefined,
   };
 
   if (totalComments > 0) {
     statusResult.message = `${inactiveComments}/${totalComments}`;
-    statusResult.icon = totalComments === inactiveComments ? Statuses.Success : Statuses.Failed;
+    statusResult.icon =
+      totalComments === inactiveComments ? Statuses.Success : Statuses.Failed;
   }
 
   return statusResult;

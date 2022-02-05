@@ -2,7 +2,6 @@
 if (!Array.prototype.fill) {
   Object.defineProperty(Array.prototype, 'fill', {
     value: function (value) {
-
       // Steps 1-2.
       if (this == null) {
         throw new TypeError('this is null or not defined');
@@ -18,19 +17,20 @@ if (!Array.prototype.fill) {
       var relativeStart = start >> 0;
 
       // Step 8.
-      var k = relativeStart < 0 ?
-        Math.max(len + relativeStart, 0) :
-        Math.min(relativeStart, len);
+      var k =
+        relativeStart < 0
+          ? Math.max(len + relativeStart, 0)
+          : Math.min(relativeStart, len);
 
       // Steps 9-10.
       var end = arguments[2];
-      var relativeEnd = end === undefined ?
-        len : end >> 0;
+      var relativeEnd = end === undefined ? len : end >> 0;
 
       // Step 11.
-      var final = relativeEnd < 0 ?
-        Math.max(len + relativeEnd, 0) :
-        Math.min(relativeEnd, len);
+      var final =
+        relativeEnd < 0
+          ? Math.max(len + relativeEnd, 0)
+          : Math.min(relativeEnd, len);
 
       // Step 12.
       while (k < final) {
@@ -40,13 +40,12 @@ if (!Array.prototype.fill) {
 
       // Step 13.
       return O;
-    }
+    },
   });
 }
 if (!Array.prototype.includes) {
   Object.defineProperty(Array.prototype, 'includes', {
     value: function (valueToFind, fromIndex) {
-
       if (this == null) {
         throw new TypeError('"this" is null or not defined');
       }
@@ -74,7 +73,13 @@ if (!Array.prototype.includes) {
       var k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
 
       function sameValueZero(x, y) {
-        return x === y || (typeof x === 'number' && typeof y === 'number' && isNaN(x) && isNaN(y));
+        return (
+          x === y ||
+          (typeof x === 'number' &&
+            typeof y === 'number' &&
+            isNaN(x) &&
+            isNaN(y))
+        );
       }
 
       // 7. Repeat, while k < len
@@ -84,12 +89,12 @@ if (!Array.prototype.includes) {
         if (sameValueZero(o[k], valueToFind)) {
           return true;
         }
-        // c. Increase k by 1. 
+        // c. Increase k by 1.
         k++;
       }
 
       // 8. Return false
       return false;
-    }
+    },
   });
 }

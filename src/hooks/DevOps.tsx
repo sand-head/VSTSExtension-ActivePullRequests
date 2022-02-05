@@ -14,4 +14,4 @@ export function useAzureDevOpsSDK<T>(callback: () => T | Promise<T>) {
   }, []);
 
   return callbackValue;
-};
+}

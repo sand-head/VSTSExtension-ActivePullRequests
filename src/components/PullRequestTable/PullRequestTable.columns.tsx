@@ -1,19 +1,27 @@
-import { TableColumnLayout, ITableColumn, TwoLineTableCell, SimpleTableCell } from "azure-devops-ui/Table";
-import { PullRequestTableItem } from "./PullRequestTable.models";
-import * as React from "react";
-import { Ago } from "azure-devops-ui/Ago";
-import { AgoFormat } from "azure-devops-ui/Utilities/Date";
-import { Tooltip } from "azure-devops-ui/TooltipEx";
-import { Link } from "azure-devops-ui/Link";
-import { Icon, IconSize } from "azure-devops-ui/Icon";
-import { VssPersona, IIdentityDetailsProvider } from "azure-devops-ui/VssPersona";
-import { Status, StatusSize } from "azure-devops-ui/Status";
-import { IdentityRef } from "azure-devops-extension-api/WebApi/WebApi";
-import { ObservableValue } from "azure-devops-ui/Core/Observable";
-import { getVoteStatus, getCommentStatus } from "./PullRequestTable.helpers";
-import * as styles from "./PullRequestTable.columns.scss";
-import { Settings } from "../SettingsPanel/SettingsPanel.models";
-import { CommentThreadStatus } from "azure-devops-extension-api/Git";
+import {
+  TableColumnLayout,
+  ITableColumn,
+  TwoLineTableCell,
+  SimpleTableCell,
+} from 'azure-devops-ui/Table';
+import { PullRequestTableItem } from './PullRequestTable.models';
+import * as React from 'react';
+import { Ago } from 'azure-devops-ui/Ago';
+import { AgoFormat } from 'azure-devops-ui/Utilities/Date';
+import { Tooltip } from 'azure-devops-ui/TooltipEx';
+import { Link } from 'azure-devops-ui/Link';
+import { Icon, IconSize } from 'azure-devops-ui/Icon';
+import {
+  VssPersona,
+  IIdentityDetailsProvider,
+} from 'azure-devops-ui/VssPersona';
+import { Status, StatusSize } from 'azure-devops-ui/Status';
+import { IdentityRef } from 'azure-devops-extension-api/WebApi/WebApi';
+import { ObservableValue } from 'azure-devops-ui/Core/Observable';
+import { getVoteStatus, getCommentStatus } from './PullRequestTable.helpers';
+import * as styles from './PullRequestTable.columns.scss';
+import { Settings } from '../SettingsPanel/SettingsPanel.models';
+import { CommentThreadStatus } from 'azure-devops-extension-api/Git';
 
 function summonPersona(identityRef: IdentityRef): IIdentityDetailsProvider {
   return {
@@ -21,13 +29,16 @@ function summonPersona(identityRef: IdentityRef): IIdentityDetailsProvider {
       return identityRef.displayName;
     },
     getIdentityImageUrl(size: number) {
-      return identityRef._links["avatar"].href;
-    }
+      return identityRef._links['avatar'].href;
+    },
   };
 }
 
-export function getColumnTemplate(hostUri: string, settings: Settings): ITableColumn<PullRequestTableItem>[] {
-  if(!settings) {
+export function getColumnTemplate(
+  hostUri: string,
+  settings: Settings
+): ITableColumn<PullRequestTableItem>[] {
+  if (!settings) {
     settings = {
       AuthorColumnEnabled: true,
       BuildStatusColumnEnabled: true,
@@ -36,87 +47,142 @@ export function getColumnTemplate(hostUri: string, settings: Settings): ITableCo
       DetailsColumnEnabled: true,
       MyVoteColumnEnabled: true,
       RepositoryColumnEnabled: true,
-      ReviewersColumnEnabled: true
-    }
+      ReviewersColumnEnabled: true,
+    };
   }
-  
-  const renderAuthorColumn = (rowIndex: number, columnIndex: number, tableColumn: ITableColumn<PullRequestTableItem>, tableItem: PullRequestTableItem) => {
+
+  const renderAuthorColumn = (
+    rowIndex: number,
+    columnIndex: number,
+    tableColumn: ITableColumn<PullRequestTableItem>,
+    tableItem: PullRequestTableItem
+  ) => {
     return (
       <SimpleTableCell
         columnIndex={columnIndex}
         tableColumn={tableColumn}
-        key={"col-" + columnIndex}
-        contentClassName={`fontWeightSemiBold font-weight-semibold fontSizeM font-size-m scroll-hidden ${styles.pullRequestColumn}`}>
-        <VssPersona identityDetailsProvider={summonPersona(tableItem.author)}
-          className="icon-large-margin" size={"medium"} />
+        key={'col-' + columnIndex}
+        contentClassName={`fontWeightSemiBold font-weight-semibold fontSizeM font-size-m scroll-hidden ${styles.pullRequestColumn}`}
+      >
+        <VssPersona
+          identityDetailsProvider={summonPersona(tableItem.author)}
+          className="icon-large-margin"
+          size={'medium'}
+        />
         <div className="flex-row scroll-hidden">
           <Tooltip overflowOnly={true}>
-            <span className="text-ellipsis">{tableItem.author.displayName}</span>
+            <span className="text-ellipsis">
+              {tableItem.author.displayName}
+            </span>
           </Tooltip>
         </div>
       </SimpleTableCell>
     );
   };
 
-  const renderCreationDateColumn = (rowIndex: number, columnIndex: number, tableColumn: ITableColumn<PullRequestTableItem>, tableItem: PullRequestTableItem) => {
+  const renderCreationDateColumn = (
+    rowIndex: number,
+    columnIndex: number,
+    tableColumn: ITableColumn<PullRequestTableItem>,
+    tableItem: PullRequestTableItem
+  ) => {
     return (
       <SimpleTableCell
         columnIndex={columnIndex}
         tableColumn={tableColumn}
-        key={"col-" + columnIndex}
-        contentClassName={`fontWeightSemiBold font-weight-semibold fontSizeM font-size-m scroll-hidden ${styles.pullRequestColumn}`}>
+        key={'col-' + columnIndex}
+        contentClassName={`fontWeightSemiBold font-weight-semibold fontSizeM font-size-m scroll-hidden ${styles.pullRequestColumn}`}
+      >
         <div className="flex-row scroll-hidden">
           <Tooltip overflowOnly={true}>
-            <span className="text-ellipsis"><Ago date={tableItem.creationDate} format={AgoFormat.Compact} /></span>
+            <span className="text-ellipsis">
+              <Ago date={tableItem.creationDate} format={AgoFormat.Compact} />
+            </span>
           </Tooltip>
         </div>
       </SimpleTableCell>
     );
   };
 
-  const renderDetailsColumn = (rowIndex: number, columnIndex: number, tableColumn: ITableColumn<PullRequestTableItem>, tableItem: PullRequestTableItem) => {
-    const repoUri = `${hostUri}/_git/${encodeURIComponent(tableItem.repo.name)}`;
+  const renderDetailsColumn = (
+    rowIndex: number,
+    columnIndex: number,
+    tableColumn: ITableColumn<PullRequestTableItem>,
+    tableItem: PullRequestTableItem
+  ) => {
+    const repoUri = `${hostUri}/_git/${encodeURIComponent(
+      tableItem.repo.name
+    )}`;
     return (
       <TwoLineTableCell
         className={styles.pullRequestColumn}
         columnIndex={columnIndex}
         tableColumn={tableColumn}
-        key={"col-" + columnIndex}
+        key={'col-' + columnIndex}
         line1={
           <div className="fontWeightSemiBold font-weight-semibold fontSizeM font-size-m flex-row scroll-hidden">
             <Tooltip overflowOnly={true}>
-              <Link href={`${repoUri}/pullRequest/${encodeURIComponent(tableItem.id)}`}
-                className="text-ellipsis" subtle={true} target="_top">#{tableItem.id}: {tableItem.title}</Link>
+              <Link
+                href={`${repoUri}/pullRequest/${encodeURIComponent(
+                  tableItem.id
+                )}`}
+                className="text-ellipsis"
+                subtle={true}
+                target="_top"
+              >
+                #{tableItem.id}: {tableItem.title}
+              </Link>
             </Tooltip>
           </div>
-        } line2={
+        }
+        line2={
           <div className="fontSize font-size secondary-text flex-row flex-baseline text-ellipsis">
-            <Link href={`${repoUri}?version=GB${encodeURIComponent(tableItem.baseBranch)}`}
-              className="monospaced-text text-ellipsis flex-row flex-center bolt-table-link bolt-table-inline-link" subtle={true} target="_top">
+            <Link
+              href={`${repoUri}?version=GB${encodeURIComponent(
+                tableItem.baseBranch
+              )}`}
+              className="monospaced-text text-ellipsis flex-row flex-center bolt-table-link bolt-table-inline-link"
+              subtle={true}
+              target="_top"
+            >
               <Icon iconName="OpenSource" />
               <Tooltip overflowOnly={true}>
                 <span className="text-ellipsis">{tableItem.baseBranch}</span>
               </Tooltip>
             </Link>
             <Icon iconName="ChevronRightSmall" size={IconSize.small} />
-            <Link href={`${repoUri}?version=GB${encodeURIComponent(tableItem.targetBranch)}`}
-              className="monospaced-text text-ellipsis flex-row flex-center bolt-table-link bolt-table-inline-link" subtle={true} target="_top">
+            <Link
+              href={`${repoUri}?version=GB${encodeURIComponent(
+                tableItem.targetBranch
+              )}`}
+              className="monospaced-text text-ellipsis flex-row flex-center bolt-table-link bolt-table-inline-link"
+              subtle={true}
+              target="_top"
+            >
               <Icon iconName="OpenSource" />
               <Tooltip overflowOnly={true}>
                 <span className="text-ellipsis">{tableItem.targetBranch}</span>
               </Tooltip>
             </Link>
-          </div>} />
+          </div>
+        }
+      />
     );
   };
 
-  const renderRepositoryColumn = (rowIndex: number, columnIndex: number, tableColumn: ITableColumn<PullRequestTableItem>, tableItem: PullRequestTableItem) => {
+  const renderRepositoryColumn = (
+    rowIndex: number,
+    columnIndex: number,
+    tableColumn: ITableColumn<PullRequestTableItem>,
+    tableItem: PullRequestTableItem
+  ) => {
     return (
       <SimpleTableCell
         columnIndex={columnIndex}
         tableColumn={tableColumn}
-        key={"col-" + columnIndex}
-        contentClassName={`fontWeightSemiBold font-weight-semibold fontSizeM font-size-m scroll-hidden ${styles.pullRequestColumn}`}>
+        key={'col-' + columnIndex}
+        contentClassName={`fontWeightSemiBold font-weight-semibold fontSizeM font-size-m scroll-hidden ${styles.pullRequestColumn}`}
+      >
         <div className="flex-row scroll-hidden">
           <Tooltip overflowOnly={true}>
             <span className="text-ellipsis">{tableItem.repo.name}</span>
@@ -126,70 +192,116 @@ export function getColumnTemplate(hostUri: string, settings: Settings): ITableCo
     );
   };
 
-  const renderCommentStatusColumn = (rowIndex: number, columnIndex: number, tableColumn: ITableColumn<PullRequestTableItem>, tableItem: PullRequestTableItem) => {
+  const renderCommentStatusColumn = (
+    rowIndex: number,
+    columnIndex: number,
+    tableColumn: ITableColumn<PullRequestTableItem>,
+    tableItem: PullRequestTableItem
+  ) => {
     const totalComments = tableItem.comments.length;
-    const inactiveComments = tableItem.comments.filter(thread => ![CommentThreadStatus.Active, CommentThreadStatus.Pending].includes(thread.status)).length;
+    const inactiveComments = tableItem.comments.filter(
+      (thread) =>
+        ![CommentThreadStatus.Active, CommentThreadStatus.Pending].includes(
+          thread.status
+        )
+    ).length;
+
     if (totalComments == 0) {
       return (
         <SimpleTableCell
           contentClassName={styles.pullRequestColumn}
           columnIndex={columnIndex}
           tableColumn={tableColumn}
-          key={"col-" + columnIndex}>
-        </SimpleTableCell>
+          key={'col-' + columnIndex}
+        ></SimpleTableCell>
       );
     }
+
+    const commentStatus = getCommentStatus(totalComments, inactiveComments);
     return (
       <SimpleTableCell
         contentClassName={styles.pullRequestColumn}
         columnIndex={columnIndex}
         tableColumn={tableColumn}
-        key={"col-" + columnIndex}>
-        <Status {...getCommentStatus(totalComments, inactiveComments).icon} size={StatusSize.m} className="icon-margin" />
+        key={'col-' + columnIndex}
+      >
+        {commentStatus.icon && (
+          <Status
+            {...commentStatus.icon}
+            size={StatusSize.m}
+            className="icon-margin"
+          />
+        )}
         <div className="flex-row scroll-hidden">
           <Tooltip overflowOnly={true}>
-            <span className="text-ellipsis">{getCommentStatus(totalComments, inactiveComments).message}</span>
+            <span className="text-ellipsis">{commentStatus.message}</span>
           </Tooltip>
         </div>
       </SimpleTableCell>
     );
   };
 
-  const renderBuildStatusColumn = (rowIndex: number, columnIndex: number, tableColumn: ITableColumn<PullRequestTableItem>, tableItem: PullRequestTableItem) => {
+  const renderBuildStatusColumn = (
+    rowIndex: number,
+    columnIndex: number,
+    tableColumn: ITableColumn<PullRequestTableItem>,
+    tableItem: PullRequestTableItem
+  ) => {
     if (tableItem.buildDetails.build == null) {
       return (
         <SimpleTableCell
           contentClassName={styles.pullRequestColumn}
           columnIndex={columnIndex}
           tableColumn={tableColumn}
-          key={"col-" + columnIndex}>
-        </SimpleTableCell>
+          key={'col-' + columnIndex}
+        ></SimpleTableCell>
       );
     }
+
+    const buildStatus = tableItem.buildDetails.status;
     return (
       <SimpleTableCell
         contentClassName={styles.pullRequestColumn}
         columnIndex={columnIndex}
         tableColumn={tableColumn}
-        key={"col-" + columnIndex}>
-        <Status {...tableItem.buildDetails.status.icon} size={StatusSize.m} className="icon-margin" />
+        key={'col-' + columnIndex}
+      >
+        {buildStatus.icon && (
+          <Status
+            {...buildStatus.icon}
+            size={StatusSize.m}
+            className="icon-margin"
+          />
+        )}
         <div className="flex-row scroll-hidden">
           <Tooltip overflowOnly={true}>
-            <span className="text-ellipsis">{tableItem.buildDetails.status.message}</span>
+            <span className="text-ellipsis">
+              {tableItem.buildDetails.status.message}
+            </span>
           </Tooltip>
         </div>
       </SimpleTableCell>
     );
   };
 
-  const renderMyVoteColumn = (rowIndex: number, columnIndex: number, tableColumn: ITableColumn<PullRequestTableItem>, tableItem: PullRequestTableItem) => {
+  const renderMyVoteColumn = (
+    rowIndex: number,
+    columnIndex: number,
+    tableColumn: ITableColumn<PullRequestTableItem>,
+    tableItem: PullRequestTableItem
+  ) => {
     return (
       <SimpleTableCell
         columnIndex={columnIndex}
         tableColumn={tableColumn}
-        key={"col-" + columnIndex}
-        contentClassName={`fontWeightSemiBold font-weight-semibold fontSizeM font-size-m scroll-hidden ${styles.pullRequestColumn}`}>
-        <Status {...tableItem.vote.status} size={StatusSize.m} className="icon-margin" />
+        key={'col-' + columnIndex}
+        contentClassName={`fontWeightSemiBold font-weight-semibold fontSizeM font-size-m scroll-hidden ${styles.pullRequestColumn}`}
+      >
+        <Status
+          {...tableItem.vote.status}
+          size={StatusSize.m}
+          className="icon-margin"
+        />
         <div className="flex-row scroll-hidden">
           <Tooltip overflowOnly={true}>
             <span className="text-ellipsis">{tableItem.vote.message}</span>
@@ -199,51 +311,65 @@ export function getColumnTemplate(hostUri: string, settings: Settings): ITableCo
     );
   };
 
-  const renderReviewersColumn = (rowIndex: number, columnIndex: number, tableColumn: ITableColumn<PullRequestTableItem>, tableItem: PullRequestTableItem) => {
+  const renderReviewersColumn = (
+    rowIndex: number,
+    columnIndex: number,
+    tableColumn: ITableColumn<PullRequestTableItem>,
+    tableItem: PullRequestTableItem
+  ) => {
     return (
       <SimpleTableCell
         columnIndex={columnIndex}
         tableColumn={tableColumn}
-        key={"col-" + columnIndex}
-        contentClassName={`fontWeightSemiBold font-weight-semibold fontSizeM font-size-m scroll-hidden ${styles.pullRequestColumn}`}>
-        {
-          tableItem.reviewers.map(reviewer =>
-            <span className={`${styles.personaWithVote} icon-margin`}>
-              <VssPersona identityDetailsProvider={summonPersona(reviewer)} size={"small"} />
-              {Math.abs(reviewer.vote) > 1 ? (
-                <span className={styles.voteIcon}><Status {...getVoteStatus(reviewer.vote).status} size={StatusSize.s} /></span>
-              ) : ""}
-            </span>
-          )
-        }
+        key={'col-' + columnIndex}
+        contentClassName={`fontWeightSemiBold font-weight-semibold fontSizeM font-size-m scroll-hidden ${styles.pullRequestColumn}`}
+      >
+        {tableItem.reviewers.map((reviewer) => (
+          <span className={`${styles.personaWithVote} icon-margin`}>
+            <VssPersona
+              identityDetailsProvider={summonPersona(reviewer)}
+              size={'small'}
+            />
+            {Math.abs(reviewer.vote) > 1 ? (
+              <span className={styles.voteIcon}>
+                <Status
+                  {...getVoteStatus(reviewer.vote).status}
+                  size={StatusSize.s}
+                />
+              </span>
+            ) : (
+              ''
+            )}
+          </span>
+        ))}
       </SimpleTableCell>
     );
   };
-  
-  let columns = [];
 
-  if(settings.AuthorColumnEnabled) {
+  let columns: ITableColumn<PullRequestTableItem>[] = [];
+
+  if (settings.AuthorColumnEnabled) {
     columns.push({
       columnLayout: TableColumnLayout.singleLinePrefix,
-      id: "author",
-      name: "Author",
+      id: 'author',
+      name: 'Author',
       readonly: true,
       renderCell: renderAuthorColumn,
       onSize: onSize,
       width: new ObservableValue(-25),
       minWidth: 56,
       sortProps: {
-        ariaLabelAscending: "Sorted A to Z",
-        ariaLabelDescending: "Sorted Z to A"
-      }
+        ariaLabelAscending: 'Sorted A to Z',
+        ariaLabelDescending: 'Sorted Z to A',
+      },
     });
   }
-    
-  if(settings.CreatedColumnEnabled) {
+
+  if (settings.CreatedColumnEnabled) {
     columns.push({
       columnLayout: TableColumnLayout.singleLinePrefix,
-      id: "creationDate",
-      name: "Created",
+      id: 'creationDate',
+      name: 'Created',
       readonly: true,
       renderCell: renderCreationDateColumn,
       onSize: onSize,
@@ -251,110 +377,115 @@ export function getColumnTemplate(hostUri: string, settings: Settings): ITableCo
       minWidth: 130,
       sortProps: {
         sortOrder: 0,
-        ariaLabelAscending: "Sorted Oldest to Newest",
-        ariaLabelDescending: "Sorted Newest to Oldest"
-      }
+        ariaLabelAscending: 'Sorted Oldest to Newest',
+        ariaLabelDescending: 'Sorted Newest to Oldest',
+      },
     });
   }
-  
-  if(settings.DetailsColumnEnabled) {
+
+  if (settings.DetailsColumnEnabled) {
     columns.push({
       columnLayout: TableColumnLayout.twoLine,
-      id: "details",
-      name: "Details",
+      id: 'details',
+      name: 'Details',
       readonly: true,
       renderCell: renderDetailsColumn,
       onSize: onSize,
       width: new ObservableValue(-50),
       minWidth: 150,
       sortProps: {
-        ariaLabelAscending: "Sorted A to Z",
-        ariaLabelDescending: "Sorted Z to A"
-      }
+        ariaLabelAscending: 'Sorted A to Z',
+        ariaLabelDescending: 'Sorted Z to A',
+      },
     });
   }
-  
-  if(settings.RepositoryColumnEnabled) {
+
+  if (settings.RepositoryColumnEnabled) {
     columns.push({
-      id: "repository",
-      name: "Repository",
+      id: 'repository',
+      name: 'Repository',
       readonly: true,
       renderCell: renderRepositoryColumn,
       onSize: onSize,
       width: new ObservableValue(-25),
       minWidth: 75,
       sortProps: {
-        ariaLabelAscending: "Sorted A to Z",
-        ariaLabelDescending: "Sorted Z to A"
-      }
+        ariaLabelAscending: 'Sorted A to Z',
+        ariaLabelDescending: 'Sorted Z to A',
+      },
     });
   }
 
-  if(settings.CommentsColumnEnabled) {
+  if (settings.CommentsColumnEnabled) {
     columns.push({
       columnLayout: TableColumnLayout.singleLinePrefix,
-      id: "comment-status",
-      name: "Comments",
+      id: 'comment-status',
+      name: 'Comments',
       readonly: true,
       renderCell: renderCommentStatusColumn,
       onSize: onSize,
       width: new ObservableValue(100),
       minWidth: 100,
       sortProps: {
-        ariaLabelAscending: "Sorted Least to Most Resolved",
-        ariaLabelDescending: "Sorted Most to Least Resolved"
-      }
+        ariaLabelAscending: 'Sorted Least to Most Resolved',
+        ariaLabelDescending: 'Sorted Most to Least Resolved',
+      },
     });
   }
 
-  if(settings.BuildStatusColumnEnabled) {
+  if (settings.BuildStatusColumnEnabled) {
     columns.push({
       columnLayout: TableColumnLayout.singleLinePrefix,
-      id: "build-status",
-      name: "Build Status",
+      id: 'build-status',
+      name: 'Build Status',
       readonly: true,
       renderCell: renderBuildStatusColumn,
       onSize: onSize,
       width: new ObservableValue(-25),
       minWidth: 150,
       sortProps: {
-        ariaLabelAscending: "Sorted A to Z",
-        ariaLabelDescending: "Sorted Z to A"
-      }
+        ariaLabelAscending: 'Sorted A to Z',
+        ariaLabelDescending: 'Sorted Z to A',
+      },
     });
   }
 
-  if(settings.MyVoteColumnEnabled) {
+  if (settings.MyVoteColumnEnabled) {
     columns.push({
-        columnLayout: TableColumnLayout.singleLinePrefix,
-        id: "my-vote",
-        name: "My Vote",
-        readonly: true,
-        renderCell: renderMyVoteColumn,
-        onSize: onSize,
-        width: new ObservableValue(-25),
-        minWidth: 150,
-        sortProps: {
-          ariaLabelAscending: "Sorted A to Z",
-          ariaLabelDescending: "Sorted Z to A"
-        }
+      columnLayout: TableColumnLayout.singleLinePrefix,
+      id: 'my-vote',
+      name: 'My Vote',
+      readonly: true,
+      renderCell: renderMyVoteColumn,
+      onSize: onSize,
+      width: new ObservableValue(-25),
+      minWidth: 150,
+      sortProps: {
+        ariaLabelAscending: 'Sorted A to Z',
+        ariaLabelDescending: 'Sorted Z to A',
+      },
     });
   }
 
-  if(settings.ReviewersColumnEnabled) {
+  if (settings.ReviewersColumnEnabled) {
     columns.push({
       columnLayout: TableColumnLayout.none,
-      id: "reviewers",
-      name: "Reviewers",
+      id: 'reviewers',
+      name: 'Reviewers',
       readonly: true,
       renderCell: renderReviewersColumn,
       width: new ObservableValue(-33),
-      minWidth: 150
+      minWidth: 150,
     });
   }
 
-  function onSize(event: MouseEvent, index: number, width: number) {
-    (columns[index].width as ObservableValue<number>).value = width;
+  function onSize(
+    event: MouseEvent | KeyboardEvent,
+    columnIndex: number,
+    width: number,
+    column: ITableColumn<PullRequestTableItem>
+  ) {
+    (columns[columnIndex].width as ObservableValue<number>).value = width;
   }
 
   return columns;

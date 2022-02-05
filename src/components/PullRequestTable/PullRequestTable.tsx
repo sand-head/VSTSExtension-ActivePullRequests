@@ -1,152 +1,137 @@
-import { Card } from "azure-devops-ui/Card";
-import { ObservableArray, ObservableValue } from "azure-devops-ui/Core/Observable";
-import { ColumnSorting, sortItems, SortOrder, Table } from "azure-devops-ui/Table";
-import { ZeroData, ZeroDataActionType } from "azure-devops-ui/ZeroData";
-import * as React from "react";
-import * as zeroImage from "./../../static/images/pullRequest.png";
-import { getColumnTemplate as getColumns } from "./PullRequestTable.columns";
-import { PullRequestTableItem, PullRequestTableProps, PullRequestTableState } from "./PullRequestTable.models";
+import { CommentThreadStatus } from 'azure-devops-extension-api/Git';
+import {
+  ColumnSorting,
+  ITableColumn,
+  sortItems,
+  SortOrder,
+  Table,
+} from 'azure-devops-ui/Table';
+import { IFilterState } from 'azure-devops-ui/Utilities/Filter';
+import { ArrayItemProvider } from 'azure-devops-ui/Utilities/Provider';
+import * as React from 'react';
+import { Settings } from '../SettingsPanel/SettingsPanel.models';
+import { getColumnTemplate as getColumns } from './PullRequestTable.columns';
+import { PullRequestTableItem } from './PullRequestTable.models';
 
-function areArraysEqual(arr1: any[], arr2: any[]): boolean {
-  if (arr1 == null || arr2 == null) { return false; }
-  if (arr1.length !== arr2.length) { return false; }
-  for (let i = arr1.length; i--;) {
-    if (arr1[i] !== arr2[i]) { return false; }
+const areArraysEqual = (arr1: any[], arr2: any[]): boolean => {
+  if (arr1 == null || arr2 == null) {
+    return false;
+  }
+  if (arr1.length !== arr2.length) {
+    return false;
+  }
+  for (let i = arr1.length; i--; ) {
+    if (arr1[i] !== arr2[i]) {
+      return false;
+    }
   }
   return true;
-}
+};
 
-export class PullRequestTable extends React.Component<PullRequestTableProps, PullRequestTableState> {
-  constructor(props: PullRequestTableProps) {
-    super(props);
-    this.state = {
-      columns: getColumns(this.props.hostUrl, this.props.settings),
-      settings: this.props.settings,
-      filteredPrs: [],
-      pullRequestProvider: new ObservableArray<ObservableValue<PullRequestTableItem>>(
-        this.filterItems(this.props.pullRequests) || new Array(5).fill(new ObservableValue<PullRequestTableItem>(undefined))
-      )
-    };
+type SortFunction = (
+  item1: PullRequestTableItem,
+  item2: PullRequestTableItem
+) => any;
+
+const getSortFunctions = (settings: Settings): SortFunction[] => {
+  let functionsResult: SortFunction[] = [];
+
+  if (settings.AuthorColumnEnabled) {
+    functionsResult.push((item1, item2) => {
+      return item1.author.displayName.localeCompare(item2.author.displayName);
+    });
   }
 
-  private sortingBehavior = new ColumnSorting(
+  if (settings.CreatedColumnEnabled) {
+    functionsResult.push((item1, item2) => {
+      return item1.creationDate < item2.creationDate;
+    });
+  }
+
+  if (settings.DetailsColumnEnabled) {
+    functionsResult.push((item1, item2) => {
+      return item1.id - item2.id;
+    });
+  }
+
+  if (settings.RepositoryColumnEnabled) {
+    functionsResult.push((item1, item2) => {
+      return item1.repo.name.localeCompare(item2.repo.name);
+    });
+  }
+
+  if (settings.CommentsColumnEnabled) {
+    functionsResult.push((item1, item2) => {
+      return (
+        item1.comments.length -
+        item1.comments.filter((c) => c.status != CommentThreadStatus.Active)
+          .length -
+        (item2.comments.length -
+          item2.comments.filter((c) => c.status != CommentThreadStatus.Active)
+            .length)
+      );
+    });
+  }
+
+  if (settings.BuildStatusColumnEnabled) {
+    functionsResult.push((item1, item2) => {
+      return item1.buildDetails.status.message.localeCompare(
+        item2.buildDetails.status.message
+      );
+    });
+  }
+
+  if (settings.MyVoteColumnEnabled) {
+    functionsResult.push((item1, item2) => {
+      return item1.vote.message.localeCompare(item2.vote.message);
+    });
+  }
+
+  return functionsResult;
+};
+
+export interface PullRequestTableProps {
+  items: ArrayItemProvider<PullRequestTableItem>;
+  hostUrl: string;
+  filter: IFilterState;
+  settings: Settings;
+  onSort: (items: PullRequestTableItem[]) => void;
+}
+
+export interface PullRequestTableState {
+  columns: ITableColumn<PullRequestTableItem>[];
+}
+
+const PullRequestTable: React.FC<PullRequestTableProps> = (props) => {
+  const { items, hostUrl, filter, settings, onSort } = props;
+
+  const [state, setState] = React.useState<PullRequestTableState>({
+    columns: getColumns(hostUrl, settings),
+  });
+
+  const sortBehavior = new ColumnSorting<PullRequestTableItem>(
     (columnIndex: number, proposedSortOrder: SortOrder) => {
-      var newOrder = (this.state.columns[columnIndex].sortProps.sortOrder === 0 /* ascending */ ? 1 /* descending */ : 0 /* ascending */)
-      var items = this.state.pullRequestProvider.value;
-      
-      this.state.pullRequestProvider.splice(
-        0, 
-        this.state.pullRequestProvider.length, 
-        ...sortItems(
+      onSort(
+        sortItems(
           columnIndex,
-          newOrder,
-          this.sortFunctions(),
-          this.state.columns,
-          items
+          proposedSortOrder,
+          getSortFunctions(settings),
+          state.columns,
+          items.value
         )
       );
-        
-      this.state.columns[columnIndex].sortProps.sortOrder = newOrder;
-      this.setState({
-        columns: this.state.columns
-      })
     }
   );
 
-  private sortFunctions(): ((item1:any, item2:any) => any)[] {
-    let functionsResult = [];
-    
-    if(this.props.settings.AuthorColumnEnabled) {
-      functionsResult.push((item1, item2) => {
-        return item1.value.author.displayName.localeCompare(item2.value.author.displayName);
-      });
-    }
+  return (
+    <Table<PullRequestTableItem>
+      ariaLabel="Pull request table"
+      columns={state.columns}
+      itemProvider={items}
+      role="table"
+      behaviors={[sortBehavior]}
+    />
+  );
+};
 
-    if(this.props.settings.CreatedColumnEnabled) {
-      functionsResult.push((item1, item2) => {
-        return item1.value.creationDate - item2.value.creationDate;
-      });
-    }
-
-    if(this.props.settings.DetailsColumnEnabled) {
-      functionsResult.push((item1, item2) => {
-        return item1.value.id - item2.value.id;
-      });
-    }
-
-    if(this.props.settings.RepositoryColumnEnabled) {
-      functionsResult.push((item1, item2) => {
-        return item1.value.repo.name.localeCompare(item2.value.repo.name);
-      });
-    }
-
-    if(this.props.settings.CommentsColumnEnabled) {
-      functionsResult.push((item1, item2) => {
-        return (item1.value.totalComments - item1.value.inactiveComments) - (item2.value.totalComments - item2.value.inactiveComments);
-      });
-    }
-
-    if(this.props.settings.BuildStatusColumnEnabled) {
-      functionsResult.push((item1, item2) => {
-        return item1.value.buildDetails.status.message.localeCompare(item2.value.buildDetails.status.message);
-      });
-    }
-
-    if(this.props.settings.MyVoteColumnEnabled) {
-      functionsResult.push((item1, item2) => {
-        return item1.value.vote.message.localeCompare(item2.value.vote.message);
-      });
-    }
-
-    return functionsResult;
-  }
-
-  componentDidUpdate(prevProps: PullRequestTableProps, prevState: PullRequestTableState) {
-    if (prevProps.hostUrl == null && this.props.hostUrl != null) {
-      this.setState({ columns: getColumns(this.props.hostUrl, this.props.settings) });
-    }
-    if (!areArraysEqual(prevProps.pullRequests, this.props.pullRequests) || prevProps.filter !== this.props.filter) {
-      this.setState({
-        pullRequestProvider: new ObservableArray<ObservableValue<PullRequestTableItem>>(
-          this.filterItems(this.props.pullRequests) || new Array(5).fill(new ObservableValue<PullRequestTableItem>(undefined))
-        )
-      });
-    }
-  }
-
-  render() {
-    if (this.state.pullRequestProvider.length === 0) {
-      return <ZeroData
-        primaryText="No pull requests"
-        secondaryText={
-          <span>No pull requests could be found.</span>
-        }
-        imageAltText="Bars"
-        imagePath={zeroImage}
-        actionText="Refresh"
-        actionType={ZeroDataActionType.ctaButton}
-        onActionClick={_ => window.location.reload()} />;
-    }
-    return (
-      <Card className="flex-grow bolt-table-card" contentProps={{ contentPadding: false }}>
-        <Table columns={this.state.columns} itemProvider={this.state.pullRequestProvider} role="table" behaviors={[this.sortingBehavior]} />
-      </Card>
-    );
-  }
-
-  private nullSafeOrDefault = (obj, key, def: any = "") => obj[key] ? obj[key].value : def;
-  private filterItems(prs: PullRequestTableItem[]): ObservableValue<PullRequestTableItem>[] {
-    if (prs == null) { return undefined; }
-    const filteredPrs = prs.filter(x => this.filterKeyword(x) && this.filterRepository(x));
-    this.setState({ filteredPrs: filteredPrs });
-    return filteredPrs.map(x => new ObservableValue(x));
-  }
-  private filterKeyword(pr: PullRequestTableItem) {
-    return pr.title.toLowerCase().includes(this.nullSafeOrDefault(this.props.filter, "keyword").toLowerCase()) ||
-      pr.author.displayName.toLowerCase().includes(this.nullSafeOrDefault(this.props.filter, "keyword").toLowerCase());
-  }
-  private filterRepository(pr: PullRequestTableItem) {
-    const selectedRepos: string[] = this.nullSafeOrDefault(this.props.filter, "repo", []);
-    return selectedRepos.length > 0 ? selectedRepos.includes(pr.repo.id) : true;
-  }
-}
+export default PullRequestTable;

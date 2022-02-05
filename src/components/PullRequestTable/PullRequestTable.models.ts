@@ -1,24 +1,33 @@
-import { GitRepository, IdentityRefWithVote, CommentThread } from "azure-devops-extension-api/Git";
-import { IdentityRef } from "azure-devops-extension-api/WebApi/WebApi";
-import { IFilterState } from "azure-devops-ui/Utilities/Filter";
-import { ObservableArray, ObservableValue } from "azure-devops-ui/Core/Observable";
-import { IStatusProps } from "azure-devops-ui/Status";
-import { Build } from "azure-devops-extension-api/Build";
-import { ITableColumn } from "azure-devops-ui/Table";
-import { Settings } from "../SettingsPanel/SettingsPanel.models";
+import {
+  GitRepository,
+  IdentityRefWithVote,
+  CommentThread,
+} from 'azure-devops-extension-api/Git';
+import { IdentityRef } from 'azure-devops-extension-api/WebApi/WebApi';
+import { IFilterState } from 'azure-devops-ui/Utilities/Filter';
+import {
+  ObservableArray,
+  ObservableValue,
+} from 'azure-devops-ui/Core/Observable';
+import { IStatusProps } from 'azure-devops-ui/Status';
+import { Build } from 'azure-devops-extension-api/Build';
+import { ITableColumn } from 'azure-devops-ui/Table';
+import { Settings } from '../SettingsPanel/SettingsPanel.models';
 
 export interface PullRequestTableProps {
   pullRequests: PullRequestTableItem[];
   hostUrl: string;
   filter: IFilterState;
-  settings: Settings
+  settings: Settings;
 }
 
 export interface PullRequestTableState {
   columns: ITableColumn<PullRequestTableItem>[];
-  filteredPrs: PullRequestTableItem[];
-  pullRequestProvider: ObservableArray<ObservableValue<PullRequestTableItem>>;
-  settings: Settings
+  filteredPrs: (PullRequestTableItem | undefined)[];
+  pullRequestProvider: ObservableArray<
+    ObservableValue<PullRequestTableItem | undefined>
+  >;
+  settings: Settings;
 }
 
 export interface PullRequestTableItem {
