@@ -3,14 +3,14 @@ import { Panel } from 'azure-devops-ui/Panel';
 import { Toggle } from 'azure-devops-ui/Toggle';
 import {
   SettingsPanelProps,
-  ISettingsPanelState,
+  SettingsPanelState,
   SettingsColumn,
 } from './SettingsPanel.models';
 import * as styles from './SettingsPanel.scss';
 
 export default class SettingsPanel extends React.Component<
   SettingsPanelProps,
-  ISettingsPanelState
+  SettingsPanelState
 > {
   constructor(props: SettingsPanelProps) {
     super(props);

@@ -10,35 +10,22 @@ import {
   BuildRestClient,
   Build,
 } from 'azure-devops-extension-api/Build';
-import {
-  GitRepository,
-  GitRestClient,
-  PullRequestStatus,
-} from 'azure-devops-extension-api/Git';
+import { GitRepository, GitRestClient } from 'azure-devops-extension-api/Git';
 import * as SDK from 'azure-devops-extension-sdk';
 import { IUserContext } from 'azure-devops-extension-sdk';
 import { ConditionalChildren } from 'azure-devops-ui/ConditionalChildren';
-import { ObservableValue } from 'azure-devops-ui/Core/Observable';
 import { DropdownFilterBarItem } from 'azure-devops-ui/Dropdown';
 import { FilterBar } from 'azure-devops-ui/FilterBar';
 import { Header, TitleSize } from 'azure-devops-ui/Header';
-import { HeaderCommandBarWithFilter } from 'azure-devops-ui/HeaderCommandBar';
 import { Page } from 'azure-devops-ui/Page';
 import { Surface, SurfaceBackground } from 'azure-devops-ui/Surface';
 import { Tab, TabBar } from 'azure-devops-ui/Tabs';
 import { KeywordFilterBarItem } from 'azure-devops-ui/TextFilterBarItem';
-import { DropdownMultiSelection } from 'azure-devops-ui/Utilities/DropdownSelection';
-import {
-  Filter,
-  FILTER_CHANGE_EVENT,
-  IFilter,
-  IFilterState,
-} from 'azure-devops-ui/Utilities/Filter';
+import { Filter, IFilterState } from 'azure-devops-ui/Utilities/Filter';
 import * as React from 'react';
 import { useState } from 'react';
 import * as styles from './app.scss';
 import { useAzureDevOpsSDK } from './hooks/DevOps';
-import { PullRequestTable } from './components/PullRequestTable/PullRequestTable';
 import {
   getStatusFromBuild,
   getVoteStatus,
@@ -49,7 +36,7 @@ import { Settings } from './components/SettingsPanel/SettingsPanel.models';
 import { TabContents, TabType } from './components/TabContents';
 
 export interface AppState {
-  hostUrl?: string;
+  hostUrl: string;
   pullRequests: PullRequestTableItem[];
   repositories: GitRepository[];
   selectedTabId: TabType;
@@ -57,30 +44,19 @@ export interface AppState {
   draftPrBadge?: number;
   filter: IFilterState;
   showSettings: boolean;
-  settings?: Settings;
+  settings: Settings;
 }
 
 export const App: React.FunctionComponent = () => {
   const gitClient = API.getClient(GitRestClient);
   const buildClient = API.getClient(BuildRestClient);
-  const filter = new Filter();
-  const [state, setState] = useState<AppState>({
-    hostUrl: undefined,
-    showSettings: false,
-    filter: {},
-    repositories: [],
-    pullRequests: [],
-    selectedTabId: TabType.Active,
-    activePrBadge: undefined,
-    draftPrBadge: undefined,
-    settings: undefined,
-  });
+  const [state, setState] = useState<AppState>();
   const [userContext, setUserContext] = useState<IUserContext>();
   const [projectName, setProjectName] = useState<string>();
   const [dataManager, setDataManager] = useState<IExtensionDataManager>();
 
   const onSelectedTabChanged = (newTabId: string) => {
-    if (state.hostUrl) {
+    if (state?.hostUrl) {
       setState({ ...state, selectedTabId: newTabId as TabType });
     }
   };
@@ -223,7 +199,6 @@ export const App: React.FunctionComponent = () => {
     console.debug('base URL', baseUrl);
 
     setState({
-      ...state,
       hostUrl: baseUrl,
       settings: settings,
       repositories: repos,
@@ -232,8 +207,21 @@ export const App: React.FunctionComponent = () => {
       draftPrBadge: pullRequests.filter(
         (pr) => pr.isDraft && pr.author.id === userContext!.id
       ).length,
+      selectedTabId: TabType.Active,
+      filter: {},
+      showSettings: false,
     });
   });
+
+  const closeSettings = () => {
+    if (state) {
+      setState({ ...state, showSettings: false });
+    }
+  };
+
+  if (!state) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <Surface background={SurfaceBackground.neutral}>

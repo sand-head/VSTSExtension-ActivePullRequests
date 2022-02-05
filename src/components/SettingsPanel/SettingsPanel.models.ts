@@ -22,14 +22,14 @@ export interface Settings {
   ReviewersColumnEnabled: boolean;
 }
 
-export interface ISettingsPanelState {
+export interface SettingsPanelState {
   dataManager: IExtensionDataManager;
   settings: Settings;
   projectName: string;
 }
 
 export interface SettingsPanelProps {
-  closeSettings: Function;
+  closeSettings: () => void;
   dataManager: IExtensionDataManager;
   settings: Settings;
   projectName: string;
